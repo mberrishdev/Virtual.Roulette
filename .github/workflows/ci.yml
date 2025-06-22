@@ -44,7 +44,7 @@ jobs:
       - name: 📊 Generate coverage report
         run: |
           ~/.dotnet/tools/reportgenerator \
-            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -reports:"**/coverage.cobertura.xml" \
             -targetdir:"coveragereport" \
             -reporttypes:Html
 
