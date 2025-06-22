@@ -21,7 +21,7 @@ public class RefreshTokenService(
         {
             UserId = userId,
             Token = token,
-            Expiration = DateTime.UtcNow.AddMinutes(authSettings.Value.RefreshTokenExpirationMinutes),
+            Expiration = DateTime.Now.AddMinutes(authSettings.Value.RefreshTokenExpirationMinutes),
             IsRevoked = false
         };
 
@@ -33,7 +33,7 @@ public class RefreshTokenService(
     {
         var stored =
             await refreshTokenQueryRepository.GetAsync(x => x.Token == token, cancellationToken: cancellationToken);
-        return stored is { IsRevoked: false } && stored.Expiration > DateTime.UtcNow;
+        return stored is { IsRevoked: false } && stored.Expiration > DateTime.Now;
     }
 
     public async Task InvalidateAsync(string token, CancellationToken cancellationToken)

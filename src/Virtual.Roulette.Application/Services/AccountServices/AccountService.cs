@@ -12,7 +12,7 @@ public class AccountService(IQueryRepository<Account> accountQueryRepository, IR
 {
     public async Task<AccountModel> GetAccount(int userId, CancellationToken cancellationToken)
     {
-        var account = await accountRepository.GetAsync(a => a.UserId == userId, cancellationToken: cancellationToken)
+        var account = await accountQueryRepository.GetAsync(a => a.UserId == userId, cancellationToken: cancellationToken)
                       ?? throw new ObjectNotFoundException(nameof(Account), nameof(Account.UserId), userId);
 
         return new AccountModel

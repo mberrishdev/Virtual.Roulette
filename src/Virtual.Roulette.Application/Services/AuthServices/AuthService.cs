@@ -17,8 +17,8 @@ namespace Virtual.Roulette.Application.Services.AuthServices;
 public class AuthService(
     IQueryRepository<User> userQueryRepository,
     IRepository<User> useRepository,
-    IOptions<AuthSettings> authSettings,
-    IRefreshTokenService refreshTokenService) : IAuthService
+    IRefreshTokenService refreshTokenService,
+    IJwtTokenService jwtTokenService) : IAuthService
 {
     public async Task<AuthResponse> LoginAsync(AuthRequest authRequest, CancellationToken cancellationToken)
     {
@@ -27,14 +27,12 @@ public class AuthService(
 
         const string errorMessage = "Invalid credentials.";
 
-        if (!HashHelper.Hash(authRequest.Password).Equals(user.PasswordHash))
+        if (user == null || !HashHelper.Hash(authRequest.Password).Equals(user.PasswordHash))
         {
             throw new InvalidCredentialsException(errorMessage);
         }
 
-        var expiration = DateTime.Now.AddMinutes(60);
-
-        var jwtToken = GenerateJwtToken(user);
+        var tokenResult = jwtTokenService.GenerateToken(user);
 
         var refreshToken = await refreshTokenService.GenerateAndStoreRefreshTokenAsync(user.Id, cancellationToken);
 
@@ -42,8 +40,8 @@ public class AuthService(
         {
             UserId = user.Id,
             UserName = user.Username,
-            Token = jwtToken,
-            TokenExpiration = expiration,
+            Token = tokenResult.Token,
+            TokenExpiration = tokenResult.ExpiresAt,
             RefreshToken = refreshToken,
         };
     }
@@ -60,15 +58,16 @@ public class AuthService(
 
         var user = await userQueryRepository.GetAsync(u => u.Id == userId, cancellationToken: cancellationToken);
 
-        var newAccessToken = GenerateJwtToken(user);
+        var tokenResult = jwtTokenService.GenerateToken(user);
+
         var newRefreshToken = await refreshTokenService.GenerateAndStoreRefreshTokenAsync(user.Id, cancellationToken);
 
         return new AuthResponse
         {
             UserId = user.Id,
             UserName = user.Username,
-            Token = newAccessToken,
-            TokenExpiration = DateTime.UtcNow.AddMinutes(authSettings.Value.TokenExpirationMinutes),
+            Token = tokenResult.Token,
+            TokenExpiration = tokenResult.ExpiresAt,
             RefreshToken = newRefreshToken
         };
     }
@@ -85,27 +84,5 @@ public class AuthService(
         var user = new User(request.Username, HashHelper.Hash(request.Password));
 
         await useRepository.InsertAsync(user, cancellationToken);
-    }
-
-    private string GenerateJwtToken(User user)
-    {
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username)
-        };
-
-        var creds = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings.Value.SecretKey)),
-            SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: authSettings.Value.ValidIssuer,
-            audience: authSettings.Value.ValidAudience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(authSettings.Value.TokenExpirationMinutes),
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
