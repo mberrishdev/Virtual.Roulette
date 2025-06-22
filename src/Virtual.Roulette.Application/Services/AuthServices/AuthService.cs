@@ -9,7 +9,6 @@ using Virtual.Roulette.Application.Contracts.Services.AuthServices;
 using Virtual.Roulette.Application.Contracts.Services.AuthServices.Models;
 using Virtual.Roulette.Application.Exceptions;
 using Virtual.Roulette.Application.Helpers;
-using Virtual.Roulette.Application.Models;
 using Virtual.Roulette.Application.Settings;
 using Virtual.Roulette.Domain.Entities.Users;
 
@@ -21,7 +20,7 @@ public class AuthService(
     IOptions<AuthSettings> authSettings,
     IRefreshTokenService refreshTokenService) : IAuthService
 {
-    public async Task<LoginResponse> LoginAsync(AuthRequest authRequest, CancellationToken cancellationToken)
+    public async Task<AuthResponse> LoginAsync(AuthRequest authRequest, CancellationToken cancellationToken)
     {
         var user = await userQueryRepository.GetAsync(u => u.Username == authRequest.UserName,
             cancellationToken: cancellationToken);
@@ -39,7 +38,7 @@ public class AuthService(
 
         var refreshToken = await refreshTokenService.GenerateAndStoreRefreshTokenAsync(user.Id, cancellationToken);
 
-        return new LoginResponse
+        return new AuthResponse
         {
             UserId = user.Id,
             UserName = user.Username,
@@ -49,7 +48,7 @@ public class AuthService(
         };
     }
 
-    public async Task<LoginResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
+    public async Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
         var isValid = await refreshTokenService.IsValidAsync(refreshToken, cancellationToken);
         if (!isValid) throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
@@ -64,7 +63,7 @@ public class AuthService(
         var newAccessToken = GenerateJwtToken(user);
         var newRefreshToken = await refreshTokenService.GenerateAndStoreRefreshTokenAsync(user.Id, cancellationToken);
 
-        return new LoginResponse
+        return new AuthResponse
         {
             UserId = user.Id,
             UserName = user.Username,

@@ -37,6 +37,8 @@ public class ErrorHandlerMiddleware
                 Domain.Exceptions.CommandValidationException => (int)HttpStatusCode.BadRequest,
                 Domain.Exceptions.DomainException => (int)HttpStatusCode.BadRequest,
                 TaskCanceledException => (int)HttpStatusCode.GatewayTimeout,
+                UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+                InvalidCastException => (int)HttpStatusCode.BadRequest,
                 not null => (int)HttpStatusCode.InternalServerError,
                 _ => (int)HttpStatusCode.InternalServerError
             };

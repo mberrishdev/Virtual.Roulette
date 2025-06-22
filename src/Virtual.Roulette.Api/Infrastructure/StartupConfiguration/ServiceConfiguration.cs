@@ -10,6 +10,8 @@ using Virtual.Roulette.Application;
 using Virtual.Roulette.Infrastructure;
 using Virtual.Roulette.Persistence;
 using Virtual.Roulette.Persistence.Database;
+using System.Reflection;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Virtual.Roulette.Api.Infrastructure.StartupConfiguration;
 
@@ -159,12 +161,14 @@ public static class ServiceConfiguration
                     }
                 });
 
-                // Set the comments path for the Swagger JSON and UI.
-                // var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                // var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                // swagger.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                swagger.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
                 swagger.DocumentFilter<HealthChecksFilter>();
+                swagger.ExampleFilters();
             });
+
+        services.AddSwaggerExamplesFromAssemblyOf<Program>();
 
         return services;
     }

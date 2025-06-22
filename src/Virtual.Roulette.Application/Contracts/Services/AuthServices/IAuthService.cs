@@ -6,7 +6,7 @@ namespace Virtual.Roulette.Application.Contracts.Services.AuthServices;
 
 public interface IAuthService
 {
-    Task<LoginResponse> LoginAsync(AuthRequest authRequest, CancellationToken cancellationToken);
+    Task<AuthResponse> LoginAsync(AuthRequest authRequest, CancellationToken cancellationToken);
     Task RegisterAsync(RegisterRequest request, CancellationToken cancellationToken);
-    Task<LoginResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
+    Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
 }
