@@ -25,12 +25,10 @@ jobs:
       - name: 🔨 Build solution
         run: dotnet build --no-restore --configuration Release
 
-      - name: 🧪 Run unit tests with coverage
+      - name: 🧪 Run unit tests
         run: |
           dotnet test --no-build --configuration Release \
-            /p:CollectCoverage=true \
-            /p:CoverletOutput=TestResults/coverage.xml \
-            /p:CoverletOutputFormat=cobertura
+            --collect:"XPlat Code Coverage"
       
       - name: 📥 Install ReportGenerator
         run: |
@@ -41,7 +39,7 @@ jobs:
       - name: 📊 Generate coverage report
         run: |
           ~/.dotnet/tools/reportgenerator \
-            -reports:"TestResults/coverage.xml" \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"coveragereport" \
             -reporttypes:Html
 
