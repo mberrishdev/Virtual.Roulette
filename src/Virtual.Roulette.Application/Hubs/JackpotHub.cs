@@ -11,9 +11,4 @@ public interface IJackpotClient
 
 public class JackpotHub(IJackpotService jackpotService) : Hub<IJackpotClient>
 {
-    public async Task RequestCurrentJackpot()
-    {
-        var jackpot = jackpotService.CurrentAmount;
-        await Clients.Caller.ReceiveJackpot(jackpot);
-    }
 }
