@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Virtual.Roulette.Application.Contracts.Services.AuthService.Models;
 using Virtual.Roulette.Application.Contracts.Services.AuthServices;
+using Virtual.Roulette.Application.Models;
 using Virtual.Roulette.Application.Contracts.Services.AuthServices.Models;
 
 namespace Virtual.Roulette.Api.Controllers;
@@ -16,6 +17,14 @@ public class AuthController(IAuthService authService) : ApiControllerBase
         var loginResponse = await authService.LoginAsync(request, cancellationToken);
 
         return Ok(loginResponse);
+    }
+
+    [HttpPost("refresh")]
+    public async Task<ActionResult<LoginResponse>> Refresh([FromBody] RefreshRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await authService.RefreshAsync(request.RefreshToken, cancellationToken);
+        return Ok(response);
     }
 
     [HttpPost("register")]

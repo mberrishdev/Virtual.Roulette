@@ -23,10 +23,12 @@ public static class DependencyInjection
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ISpinService, SpinService>();
         services.AddScoped<IBetService, BetService>();
+        
         services.AddSingleton<IJackpotService, JackpotService>();
 
         return services;

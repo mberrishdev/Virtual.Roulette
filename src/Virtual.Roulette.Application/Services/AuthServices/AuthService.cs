@@ -18,7 +18,8 @@ namespace Virtual.Roulette.Application.Services.AuthServices;
 public class AuthService(
     IQueryRepository<User> userQueryRepository,
     IRepository<User> useRepository,
-    IOptions<AuthSettings> authSettings) : IAuthService
+    IOptions<AuthSettings> authSettings,
+    IRefreshTokenService refreshTokenService) : IAuthService
 {
     public async Task<LoginResponse> LoginAsync(AuthRequest authRequest, CancellationToken cancellationToken)
     {
@@ -32,32 +33,44 @@ public class AuthService(
             throw new InvalidCredentialsException(errorMessage);
         }
 
-        var claims = new Claim[]
-        {
-            new(ClaimTypes.Name, user.Username),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings.Value.SecretKey));
-        var signInCred = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
-
         var expiration = DateTime.Now.AddMinutes(60);
 
-        var jwt = new JwtSecurityToken(
-            issuer: authSettings.Value.ValidIssuer,
-            audience: authSettings.Value.ValidAudience,
-            notBefore: DateTime.Now,
-            claims: claims,
-            expires: expiration,
-            signingCredentials: signInCred);
+        var jwtToken = GenerateJwtToken(user);
+
+        var refreshToken = await refreshTokenService.GenerateAndStoreRefreshTokenAsync(user.Id, cancellationToken);
 
         return new LoginResponse
         {
             UserId = user.Id,
             UserName = user.Username,
-            Token = new JwtSecurityTokenHandler().WriteToken(jwt),
+            Token = jwtToken,
             TokenExpiration = expiration,
+            RefreshToken = refreshToken,
+        };
+    }
+
+    public async Task<LoginResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
+    {
+        var isValid = await refreshTokenService.IsValidAsync(refreshToken, cancellationToken);
+        if (!isValid) throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
+
+        var userId = await refreshTokenService.GetUserIdFromTokenAsync(refreshToken, cancellationToken);
+        if (userId is null) throw new UnauthorizedAccessException("User not found.");
+
+        await refreshTokenService.InvalidateAsync(refreshToken, cancellationToken);
+
+        var user = await userQueryRepository.GetAsync(u => u.Id == userId, cancellationToken: cancellationToken);
+
+        var newAccessToken = GenerateJwtToken(user);
+        var newRefreshToken = await refreshTokenService.GenerateAndStoreRefreshTokenAsync(user.Id, cancellationToken);
+
+        return new LoginResponse
+        {
+            UserId = user.Id,
+            UserName = user.Username,
+            Token = newAccessToken,
+            TokenExpiration = DateTime.UtcNow.AddMinutes(authSettings.Value.TokenExpirationMinutes),
+            RefreshToken = newRefreshToken
         };
     }
 
@@ -73,5 +86,27 @@ public class AuthService(
         var user = new User(request.Username, HashHelper.Hash(request.Password));
 
         await useRepository.InsertAsync(user, cancellationToken);
+    }
+
+    private string GenerateJwtToken(User user)
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username)
+        };
+
+        var creds = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings.Value.SecretKey)),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: authSettings.Value.ValidIssuer,
+            audience: authSettings.Value.ValidAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(authSettings.Value.TokenExpirationMinutes),
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
