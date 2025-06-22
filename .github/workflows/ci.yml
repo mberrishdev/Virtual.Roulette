@@ -30,12 +30,16 @@ jobs:
           dotnet tool install --global dotnet-reportgenerator-globaltool
           dotnet test --no-build --configuration Release \
             /p:CollectCoverage=true \
+            /p:CoverletOutput=./TestResults/coverage.xml \
             /p:CoverletOutputFormat=cobertura \
             --verbosity normal
 
-      - name: 📊 Generate code coverage report
+      - name: 📊 Generate coverage report
         run: |
-          reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coveragereport -reporttypes:Html
+          reportgenerator \
+            -reports:"./TestResults/coverage.xml" \
+            -targetdir:"coveragereport" \
+            -reporttypes:Html
 
       - name: 📎 Upload coverage report as artifact
         uses: actions/upload-artifact@v4
