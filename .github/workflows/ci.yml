@@ -1,4 +1,4 @@
-name: .NET Tests & Coverage
+name: .NET Build, Test & Coverage
 
 on:
   push:
@@ -7,34 +7,37 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: ✅ Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup .NET
+      - name: ✅ Setup .NET SDK
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
+      - name: ✅ Restore dependencies
         run: dotnet restore
 
-      - name: Build solution
+      - name: 🔨 Build solution
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run tests with coverage
+      - name: 🧪 Run unit tests with coverage
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
-          dotnet test --no-build --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
+          dotnet test --no-build --configuration Release \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=cobertura \
+            --verbosity normal
 
-      - name: Generate coverage report
+      - name: 📊 Generate code coverage report
         run: |
           reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coveragereport -reporttypes:Html
 
-      - name: Upload coverage report as artifact
+      - name: 📎 Upload coverage report as artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
