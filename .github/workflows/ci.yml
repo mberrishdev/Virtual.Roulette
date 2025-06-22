@@ -29,6 +29,11 @@ jobs:
         run: |
           dotnet test --no-build --configuration Release \
             --collect:"XPlat Code Coverage"
+
+      - name: 🔍 Debug - Find coverage report
+        run: |
+          echo "Searching for coverage.cobertura.xml files..."
+          find . -name "coverage.cobertura.xml"
       
       - name: 📥 Install ReportGenerator
         run: |
