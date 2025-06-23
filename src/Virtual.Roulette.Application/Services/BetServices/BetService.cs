@@ -1,13 +1,10 @@
 using System.Security.Cryptography;
-using Common.Repository.Repository;
 using Common.Repository.UnitOfWork;
-using ge.singular.roulette;
 using Virtual.Roulette.Application.Contracts.Services.AccountServices;
 using Virtual.Roulette.Application.Contracts.Services.BetServices;
 using Virtual.Roulette.Application.Contracts.Services.BetServices.Models;
 using Virtual.Roulette.Application.Contracts.Services.JackpotServices;
 using Virtual.Roulette.Application.Contracts.Services.SpinServices;
-using Virtual.Roulette.Domain.Entities.Accounts;
 using Virtual.Roulette.Domain.Entities.Spins;
 
 namespace Virtual.Roulette.Application.Services.BetServices;
@@ -16,6 +13,7 @@ public class BetService(
     ISpinService spinService,
     IAccountService accountService,
     IJackpotService jackpotService,
+    IBetValidator betValidator,
     IUnitOfWork unitOfWork)
     : IBetService
 {
@@ -24,7 +22,7 @@ public class BetService(
     {
         var account = await accountService.GetAccount(userId, cancellationToken);
 
-        var validation = CheckBets.IsValid(betJson);
+        var validation = betValidator.IsValid(betJson);
         if (!validation.getIsValid())
             throw new Exception("Bet is invalid");
 
@@ -34,7 +32,7 @@ public class BetService(
             throw new Exception("Insufficient balance");
 
         var winningNumber = RandomNumberGenerator.GetInt32(0, 37);
-        var wonAmountInCents = CheckBets.EstimateWin(betJson, winningNumber);
+        var wonAmountInCents = betValidator.EstimateWin(betJson, winningNumber);
         var wonAmount = wonAmountInCents / 100.0m;
 
         using var scope = await unitOfWork.CreateScopeAsync(cancellationToken);

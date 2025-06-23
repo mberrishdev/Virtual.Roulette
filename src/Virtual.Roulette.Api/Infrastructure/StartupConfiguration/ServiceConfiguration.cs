@@ -62,6 +62,9 @@ public static class ServiceConfiguration
 
     private static IServiceCollection AddAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
+        
+        var jwtKey = configuration.GetSection("AuthSettings:SecretKey").ToString();
+
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
