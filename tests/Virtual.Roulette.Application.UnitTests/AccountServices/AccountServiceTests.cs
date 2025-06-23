@@ -105,4 +105,64 @@ public class AccountServiceTests
         // Assert
         _repoMock.Verify(r => r.UpdateAsync(account, CancellationToken.None), Times.Once);
     }
+
+    [Fact]
+    public async Task WithdrawAsync_WhenAccountDoesNotExist_ShouldThrowObjectNotFoundException()
+    {
+        // Arrange
+        _repoMock
+            .Setup(r => r.GetForUpdateAsync(a => a.UserId == 123, null, CancellationToken.None))!
+            .ReturnsAsync((Account?)null);
+
+        // Act
+        Func<Task> act = async () => await _service.WithdrawAsync(123, 20m, CancellationToken.None);
+
+        // Assert
+        await act.Should()
+            .ThrowAsync<ObjectNotFoundException>()
+            .WithMessage("*Account*UserId*123*");
+    }
+
+    [Fact]
+    public async Task DepositAsync_WhenAccountDoesNotExist_ShouldThrowObjectNotFoundException()
+    {
+        // Arrange
+        _repoMock
+            .Setup(r => r.GetForUpdateAsync(a => a.UserId == 123, null, CancellationToken.None))!
+            .ReturnsAsync((Account?)null);
+
+        // Act
+        Func<Task> act = async () => await _service.DepositAsync(123, 50m, CancellationToken.None);
+
+        // Assert
+        await act.Should()
+            .ThrowAsync<ObjectNotFoundException>()
+            .WithMessage("*Account*UserId*123*");
+    }
+
+    [Theory]
+    [InlineData(0.001)]
+    [InlineData(0.999)]
+    [InlineData(1.004)]
+    [InlineData(1.006)]
+    public async Task GetAccount_BalanceInCentsCalculation_ShouldRoundCorrectly(decimal balance)
+    {
+        // Arrange
+        var account = new Account();
+        account.SetPrivateProperty(nameof(account.Id), 1);
+        account.SetPrivateProperty(nameof(account.UserId), 123);
+        account.SetPrivateProperty(nameof(account.Balance), balance);
+        account.SetPrivateProperty(nameof(account.Currency), "USD");
+
+        _queryRepoMock
+            .Setup(r => r.GetAsync(a => a.UserId == 123, null, CancellationToken.None))
+            .ReturnsAsync(account);
+
+        // Act
+        var result = await _service.GetAccount(123, CancellationToken.None);
+
+        // Assert
+        var expectedCents = (int)Math.Round(balance * 100, MidpointRounding.AwayFromZero);
+        result.BalanceInCents.Should().Be(expectedCents);
+    }
 }
