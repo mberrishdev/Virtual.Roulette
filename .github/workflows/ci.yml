@@ -1,0 +1,55 @@
+name: .NET Build, Test & Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✅ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: ✅ Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: ✅ Restore dependencies
+        run: dotnet restore
+
+      - name: 🔨 Build solution
+        run: dotnet build --no-restore --configuration Release
+
+      - name: 🧪 Run unit tests
+        run: |
+          dotnet test --no-build --configuration Release \
+            --collect:"XPlat Code Coverage"
+
+      - name: 🔍 Debug - Find coverage report
+        run: |
+          echo "Searching for coverage.cobertura.xml files..."
+          find . -name "coverage.cobertura.xml"
+      
+      - name: 📥 Install ReportGenerator
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+        env:
+          DOTNET_ROOT: /usr/share/dotnet
+      
+      - name: 📊 Generate coverage report
+        run: |
+          ~/.dotnet/tools/reportgenerator \
+            -reports:"**/coverage.cobertura.xml" \
+            -targetdir:"coveragereport" \
+            -reporttypes:Html
+
+      - name: 📎 Upload coverage report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coveragereport
