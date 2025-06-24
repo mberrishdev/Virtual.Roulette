@@ -15,14 +15,7 @@ public class AccountService(IQueryRepository<Account> accountQueryRepository, IR
         var account = await accountQueryRepository.GetAsync(a => a.UserId == userId, cancellationToken: cancellationToken)
                       ?? throw new ObjectNotFoundException(nameof(Account), nameof(Account.UserId), userId);
 
-        return new AccountModel
-        {
-            Id = account.Id,
-            UserId = account.UserId,
-            Balance = account.Balance,
-            BalanceInCents = (int)Math.Round(account.Balance * 100, MidpointRounding.AwayFromZero),
-            Currency = account.Currency,
-        };
+        return new AccountModel(account);
     }
 
     public async Task WithdrawAsync(int userId, decimal amount, CancellationToken cancellationToken)

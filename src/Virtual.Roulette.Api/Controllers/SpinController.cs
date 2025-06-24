@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Virtual.Roulette.Application.Contracts.Services.SpinServices;
+using Virtual.Roulette.Application.Contracts.Services.SpinServices.Models;
 using Virtual.Roulette.Domain.Entities.Spins;
 
 namespace Virtual.Roulette.Api.Controllers;
@@ -20,7 +21,7 @@ public class SpinController(ISpinService spinService) : ApiControllerBase
     /// <response code="200">Returns a list of the user's spins.</response>
     /// <response code="401">If the user is not authenticated.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(List<Spin>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<SpinModel>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetUserSpins(CancellationToken cancellationToken)
     {
