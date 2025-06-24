@@ -62,7 +62,7 @@ public class AuthController(IAuthService authService) : ApiControllerBase
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [SwaggerRequestExample(typeof(RegisterRequest), typeof(Api.Swagger.Examples.RegisterRequestExample))]
+    [SwaggerRequestExample(typeof(RegisterRequest), typeof(RegisterRequestExample))]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
         await authService.RegisterAsync(request, cancellationToken);

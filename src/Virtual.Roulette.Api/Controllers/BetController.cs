@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Filters;
+using Virtual.Roulette.Api.Swagger.Examples;
 using Virtual.Roulette.Application.Contracts.Services.BetServices;
 using Virtual.Roulette.Application.Contracts.Services.BetServices.Models;
 
@@ -27,7 +28,7 @@ public class BetController(IBetService betService, IHttpContextAccessor httpCont
     [ProducesResponseType(typeof(BetResultResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [SwaggerRequestExample(typeof(BetRequest), typeof(Api.Swagger.Examples.BetRequestExample))]
+    [SwaggerRequestExample(typeof(BetRequest), typeof(BetRequestExample))]
     public async Task<ActionResult<BetResultResponse>> PlaceBet([FromBody] BetRequest request,
         CancellationToken cancellationToken)
     {
