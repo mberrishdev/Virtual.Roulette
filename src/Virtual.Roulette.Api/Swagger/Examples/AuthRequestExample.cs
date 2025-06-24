@@ -9,8 +9,8 @@ public class AuthRequestExample : IExamplesProvider<AuthRequest>
     {
         return new AuthRequest
         {
-            UserName = "john.doe",
-            Password = "P@ssword123!"
+            UserName = "userName",
+            Password = "password"
         };
     }
 } 

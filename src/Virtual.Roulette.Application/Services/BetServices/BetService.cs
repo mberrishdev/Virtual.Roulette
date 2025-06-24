@@ -54,7 +54,7 @@ public class BetService(
 
         await scope.CompletAsync(cancellationToken);
 
-        jackpotService.AddToJackpot(wonAmountInCents / 100.0m);
+        jackpotService.AddToJackpot(betAmount);
         await jackpotService.BroadcastJackpotUpdateAsync();
 
         return new BetResultResponse

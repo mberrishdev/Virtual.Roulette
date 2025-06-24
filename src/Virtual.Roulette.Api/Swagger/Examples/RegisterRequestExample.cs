@@ -9,8 +9,8 @@ public class RegisterRequestExample : IExamplesProvider<RegisterRequest>
     {
         return new RegisterRequest
         {
-            Username = "jane.doe",
-            Password = "NewP@ssword123!"
+            Username = "userName",
+            Password = "password"
         };
     }
 } 

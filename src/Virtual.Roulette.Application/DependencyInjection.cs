@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<ISpinService, SpinService>();
         services.AddScoped<IBetService, BetService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IBetValidator, BetValidator>();
         
         services.AddSingleton<IJackpotService, JackpotService>();
 
