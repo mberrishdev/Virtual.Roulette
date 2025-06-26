@@ -1,60 +1,33 @@
+using Common.Repository.Repository;
 using Microsoft.AspNetCore.SignalR;
 using Virtual.Roulette.Application.Contracts.Services.JackpotServices;
 using Virtual.Roulette.Application.Contracts.Services.JackpotServices.Models;
 using Virtual.Roulette.Application.Hubs;
+using Virtual.Roulette.Domain.Entities.Jackpots;
 
 namespace Virtual.Roulette.Application.Services.JackpotServices;
 
-public class JackpotService(IHubContext<JackpotHub, IJackpotClient> jackpotHubContext) : IJackpotService
+public class JackpotService(
+    IRepository<Jackpot> repository,
+    IQueryRepository<Jackpot> queryRepository,
+    IHubContext<JackpotHub, IJackpotClient> jackpotHubContext) : IJackpotService
 {
-    private decimal _amount;
-    private readonly object _lock = new();
-
-    private decimal CurrentAmount
+    public async Task AddToJackpot(decimal betAmount, CancellationToken cancellationToken)
     {
-        get
-        {
-            lock (_lock)
-                return _amount;
-        }
+        var amount = betAmount * 0.01m;
+        await repository.InsertAsync(new Jackpot(amount), cancellationToken);
+    }
+    
+    public async Task<decimal> GetJackpotAmountAsync(CancellationToken cancellationToken)
+    {
+        var jackpots = await queryRepository.GetListAsync(cancellationToken: cancellationToken);
+
+        return jackpots.Sum(x => x.Amount);
     }
 
-    public JackpotModel GetJackpot()
+    public async Task BroadcastJackpotUpdateAsync(CancellationToken cancellationToken)
     {
-        return new JackpotModel()
-        {
-            Amount = CurrentAmount
-        };
-    }
-
-    public decimal AddToJackpot(decimal betAmount)
-    {
-        var addition = betAmount * 0.01m;
-
-        lock (_lock)
-        {
-            _amount += addition;
-
-            return _amount;
-        }
-    }
-
-    public void SetAmount(decimal amount)
-    {
-        lock (_lock)
-        {
-            _amount = amount;
-        }
-    }
-
-    public async Task BroadcastJackpotUpdateAsync()
-    {
-        decimal currentAmount;
-        lock (_lock)
-        {
-            currentAmount = _amount;
-        }
-
+        var currentAmount = await GetJackpotAmountAsync(cancellationToken);
         await jackpotHubContext.Clients.All.JackpotUpdated(currentAmount);
     }
 }

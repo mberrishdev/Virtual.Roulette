@@ -31,7 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IBetValidator, BetValidator>();
         
-        services.AddSingleton<IJackpotService, JackpotService>();
+        services.AddScoped<IJackpotService, JackpotService>();
 
         return services;
     }

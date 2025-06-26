@@ -1,156 +1,80 @@
+using Common.Repository.Repository;
 using FluentAssertions;
-using Microsoft.AspNetCore.SignalR;
 using Moq;
 using Virtual.Roulette.Application.Hubs;
 using Virtual.Roulette.Application.Services.JackpotServices;
+using Virtual.Roulette.Domain.Entities.Jackpots;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Virtual.Roulette.Application.UnitTests.JackpotServices;
 
 public class JackpotServiceTests
 {
-    private readonly Mock<IHubContext<JackpotHub, IJackpotClient>> _hubContextMock;
-    private readonly Mock<IHubClients<IJackpotClient>> _clientsMock;
-    private readonly Mock<IJackpotClient> _jackpotClientMock;
+    private readonly Mock<IRepository<Jackpot>> _repoMock = new();
+    private readonly Mock<IQueryRepository<Jackpot>> _queryRepoMock = new();
+    private readonly Mock<IHubContext<JackpotHub, IJackpotClient>> _hubContextMock = new();
+    private readonly Mock<IHubClients<IJackpotClient>> _clientsMock = new();
+    private readonly Mock<IJackpotClient> _jackpotClientMock = new();
+
     private readonly JackpotService _sut;
 
     public JackpotServiceTests()
     {
-        _hubContextMock = new Mock<IHubContext<JackpotHub, IJackpotClient>>();
-        _clientsMock = new Mock<IHubClients<IJackpotClient>>();
-        _jackpotClientMock = new Mock<IJackpotClient>();
+        _hubContextMock.Setup(h => h.Clients).Returns(_clientsMock.Object);
+        _clientsMock.Setup(c => c.All).Returns(_jackpotClientMock.Object);
 
-        _hubContextMock.Setup(x => x.Clients).Returns(_clientsMock.Object);
-        _clientsMock.Setup(x => x.All).Returns(_jackpotClientMock.Object);
-
-        _sut = new JackpotService(_hubContextMock.Object);
+        _sut = new JackpotService(_repoMock.Object, _queryRepoMock.Object, _hubContextMock.Object);
     }
 
     [Fact]
-    public void GetJackpot_WhenCalled_ShouldReturnJackpotModel()
-    {
-        // Act
-        var result = _sut.GetJackpot();
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Amount.Should().Be(0);
-    }
-
-    [Fact]
-    public void GetJackpot_WhenAmountIsSet_ShouldReturnCorrectAmount()
+    public async Task AddToJackpot_WhenCalled_ShouldInsert1PercentIntoDb()
     {
         // Arrange
-        var expectedAmount = 1000m;
-        _sut.SetAmount(expectedAmount);
+        var bet = 1000m;
+        var expected = bet * 0.01m;
 
         // Act
-        var result = _sut.GetJackpot();
+        await _sut.AddToJackpot(bet, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Amount.Should().Be(expectedAmount);
-    }
-
-    [Theory]
-    [InlineData(100, 1)]
-    [InlineData(500, 5)]
-    [InlineData(1000, 10)]
-    [InlineData(0, 0)]
-    public void AddToJackpot_WhenBetAmountProvided_ShouldAdd1PercentToJackpot(decimal betAmount,
-        decimal expectedAddition)
-    {
-        // Arrange
-        var initialAmount = 100m;
-        _sut.SetAmount(initialAmount);
-
-        // Act
-        var newAmount = _sut.AddToJackpot(betAmount);
-
-        // Assert
-        newAmount.Should().Be(initialAmount + expectedAddition);
-        _sut.GetJackpot().Amount.Should().Be(initialAmount + expectedAddition);
+        _repoMock.Verify(r =>
+                r.InsertAsync(It.Is<Jackpot>(j => j.Amount == expected),
+                    It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public void AddToJackpot_WhenCalledMultipleTimes_ShouldAccumulateCorrectly()
+    public async Task GetJackpotAmountAsync_WhenCalled_ShouldReturnSumOfAllJackpots()
     {
         // Arrange
-        const decimal firstBet = 100m;
-        const decimal secondBet = 200m;
-        var expectedTotal = (firstBet * 0.01m) + (secondBet * 0.01m);
+        var jackpots = new List<Jackpot>
+        {
+            new(10),
+            new(20),
+            new(30)
+        };
+        _queryRepoMock.Setup(q => q.GetListAsync(null, null, null, null, null, CancellationToken.None))
+            .ReturnsAsync(jackpots);
 
         // Act
-        _sut.AddToJackpot(firstBet);
-        var finalAmount = _sut.AddToJackpot(secondBet);
+        var result = await _sut.GetJackpotAmountAsync(default);
 
         // Assert
-        finalAmount.Should().Be(expectedTotal);
-        _sut.GetJackpot().Amount.Should().Be(expectedTotal);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(100)]
-    [InlineData(1000.50)]
-    [InlineData(-100)]
-    public void SetAmount_WhenAmountProvided_ShouldSetCorrectAmount(decimal amount)
-    {
-        // Act
-        _sut.SetAmount(amount);
-
-        // Assert
-        _sut.GetJackpot().Amount.Should().Be(amount);
+        result.Should().Be(60);
     }
 
     [Fact]
-    public void SetAmount_WhenCalledAfterAddToJackpot_ShouldOverrideAmount()
+    public async Task BroadcastJackpotUpdateAsync_WhenCalled_ShouldBroadcastCurrentAmount()
     {
         // Arrange
-        _sut.AddToJackpot(1000m);
-        var newAmount = 500m;
+        var jackpots = new List<Jackpot> { new(100), new(200) };
+        _queryRepoMock.Setup(q => q.GetListAsync(null, null, null, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(jackpots);
 
         // Act
-        _sut.SetAmount(newAmount);
+        await _sut.BroadcastJackpotUpdateAsync(CancellationToken.None);
 
         // Assert
-        _sut.GetJackpot().Amount.Should().Be(newAmount);
-    }
-
-    [Fact]
-    public async Task BroadcastJackpotUpdateAsync_WhenCalled_ShouldCallJackpotUpdatedOnAllClients()
-    {
-        // Arrange
-        const decimal jackpotAmount = 1500m;
-        _sut.SetAmount(jackpotAmount);
-
-        // Act
-        await _sut.BroadcastJackpotUpdateAsync();
-
-        // Assert
-        _jackpotClientMock.Verify(x => x.JackpotUpdated(jackpotAmount), Times.Once);
-    }
-
-    [Fact]
-    public async Task BroadcastJackpotUpdateAsync_WhenCalledWithZeroAmount_ShouldBroadcastZero()
-    {
-        // Act
-        await _sut.BroadcastJackpotUpdateAsync();
-
-        // Assert
-        _jackpotClientMock.Verify(x => x.JackpotUpdated(0), Times.Once);
-    }
-
-    [Fact]
-    public async Task BroadcastJackpotUpdateAsync_WhenJackpotAmountChanges_ShouldBroadcastCurrentAmount()
-    {
-        // Arrange
-        _sut.AddToJackpot(1000m);
-        var expectedAmount = _sut.GetJackpot().Amount;
-
-        // Act
-        await _sut.BroadcastJackpotUpdateAsync();
-
-        // Assert
-        _jackpotClientMock.Verify(x => x.JackpotUpdated(expectedAmount), Times.Once);
+        _jackpotClientMock.Verify(c => c.JackpotUpdated(300), Times.Once);
     }
 }

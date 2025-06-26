@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Common.Repository.UnitOfWork;
+using Microsoft.Extensions.Logging;
 using Virtual.Roulette.Application.Contracts.Services.AccountServices;
 using Virtual.Roulette.Application.Contracts.Services.BetServices;
 using Virtual.Roulette.Application.Contracts.Services.BetServices.Models;
@@ -14,7 +15,8 @@ public class BetService(
     IAccountService accountService,
     IJackpotService jackpotService,
     IBetValidator betValidator,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    ILogger<BetService> logger)
     : IBetService
 {
     public async Task<BetResultResponse> PlaceBetAsync(int userId, string betJson, string ipAddress,
@@ -42,20 +44,21 @@ public class BetService(
         if (wonAmount > 0)
             await accountService.DepositAsync(userId, wonAmount, cancellationToken);
 
-        var spinId = await spinService.CreateSpinAsync(new Spin
-        {
-            UserId = userId,
-            BetString = betJson,
-            BetAmountCents = betAmount,
-            WonAmountCents = wonAmountInCents,
-            WinningNumber = winningNumber,
-            IpAddress = ipAddress
-        }, cancellationToken);
+        var spinId = await spinService.CreateSpinAsync(
+            new Spin(userId, betJson, betAmount, winningNumber, wonAmountInCents, ipAddress), cancellationToken);
+
+        await jackpotService.AddToJackpot(betAmount, cancellationToken);
 
         await scope.CompletAsync(cancellationToken);
 
-        jackpotService.AddToJackpot(betAmount);
-        await jackpotService.BroadcastJackpotUpdateAsync();
+        try
+        {
+            await jackpotService.BroadcastJackpotUpdateAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            logger.LogInformation("Failed to broadcast jackpot update: {Message}", e.Message);
+        }
 
         return new BetResultResponse
         {

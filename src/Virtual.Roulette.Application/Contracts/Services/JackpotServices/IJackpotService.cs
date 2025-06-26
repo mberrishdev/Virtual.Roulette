@@ -4,8 +4,7 @@ namespace Virtual.Roulette.Application.Contracts.Services.JackpotServices;
 
 public interface IJackpotService
 {
-    public JackpotModel GetJackpot();
-    decimal AddToJackpot(decimal betAmount);
-    void SetAmount(decimal amount);
-    Task BroadcastJackpotUpdateAsync();
+    Task AddToJackpot(decimal betAmount, CancellationToken cancellationToken);
+    Task<decimal> GetJackpotAmountAsync(CancellationToken cancellationToken);
+    Task BroadcastJackpotUpdateAsync(CancellationToken cancellationToken);
 }

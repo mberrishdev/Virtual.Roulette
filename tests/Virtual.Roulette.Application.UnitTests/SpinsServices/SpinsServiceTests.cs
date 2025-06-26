@@ -23,7 +23,7 @@ public class SpinServiceTests
     public async Task CreateSpinAsync_WhenCalled_ShouldInsertSpinAndReturnId()
     {
         // Arrange
-        var spin = new Spin();
+        var spin = new Spin(1, "", 3, 4, 5, "");
         var spinId = Guid.NewGuid();
         spin.SetPrivateProperty(nameof(Spin.Id), spinId);
 
@@ -46,8 +46,8 @@ public class SpinServiceTests
         var userId = 42;
         var spins = new List<Spin>
         {
-            new Spin { UserId = userId },
-            new Spin { UserId = userId }
+            new Spin(userId, "", 3, 4, 5, ""),
+            new Spin(userId, "", 3, 4, 5, "")
         };
 
         _spinQueryRepoMock.Setup(x =>

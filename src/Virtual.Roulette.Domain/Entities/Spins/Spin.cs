@@ -8,34 +8,31 @@ namespace Virtual.Roulette.Domain.Entities.Spins;
 /// </summary>
 public class Spin : Entity<Guid>
 {
-    /// <summary>
-    /// The ID of the user who made the spin.
-    /// </summary>
-    public int UserId { get; set; }
-    /// <summary>
-    /// The JSON representation of the bet placed.
-    /// </summary>
-    public string BetString { get; set; } = default!;
-    /// <summary>
-    /// The amount bet, in cents.
-    /// </summary>
-    public long BetAmountCents { get; set; }
-    /// <summary>
-    /// The amount won, in cents.
-    /// </summary>
-    public long WonAmountCents { get; set; }
-    /// <summary>
-    /// The winning number of the spin.
-    /// </summary>
-    public int WinningNumber { get; set; }
-    /// <summary>
-    /// The IP address of the user who made the spin.
-    /// </summary>
-    public string IpAddress { get; set; } = default!;
-    /// <summary>
-    /// The timestamp of when the spin was created.
-    /// </summary>
+    public int UserId { get; private set; }
+
+    public string BetString { get; private set; } = default!;
+    public long BetAmountCents { get; private set; }
+
+    public long WonAmountCents { get; private set; }
+    public int WinningNumber { get; private set; }
+    public string IpAddress { get; private set; } = default!;
     public DateTime CreatedAt { get; set; }
-    
+
     public User User { get; set; } = default!;
+
+    private Spin()
+    {
+        
+    }
+    
+    public Spin(int userId, string betString, long betAmountCents, int winningNumber, long wonAmountCents, string ipAddress)
+    {
+        UserId = userId;
+        BetString = betString;
+        BetAmountCents = betAmountCents;
+        WinningNumber = winningNumber;
+        WonAmountCents = wonAmountCents;
+        IpAddress = ipAddress;
+        CreatedAt = DateTime.UtcNow;
+    }
 }

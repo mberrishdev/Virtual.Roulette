@@ -20,8 +20,8 @@ public class JackpotController(IJackpotService jackpotService) : ApiControllerBa
     /// <response code="200">Returns the current jackpot information.</response>
     [HttpGet]
     [ProducesResponseType(typeof(JackpotModel), StatusCodes.Status200OK)]
-    public ActionResult<JackpotModel> Get()
+    public ActionResult<JackpotModel> Get(CancellationToken cancellationToken )
     {
-        return Ok(jackpotService.GetJackpot());
+        return Ok(jackpotService.GetJackpotAmountAsync(cancellationToken));
     }
 }

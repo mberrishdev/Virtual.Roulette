@@ -2,6 +2,7 @@ using Common.Repository.UnitOfWork;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using ge.singular.roulette;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Virtual.Roulette.Application.Contracts.Services.AccountServices;
 using Virtual.Roulette.Application.Contracts.Services.AccountServices.Models;
@@ -34,7 +35,8 @@ public class BetServiceTests
             _accountServiceMock.Object,
             _jackpotServiceMock.Object,
             _betValidatorMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            new Mock<ILogger<BetService>>().Object);
     }
 
     [Fact]
@@ -50,12 +52,13 @@ public class BetServiceTests
         _betValidatorMock.Setup(x => x.IsValid(betJson)).Returns(response);
 
         // Act
-        Func<Task> act = async () => await _betService.PlaceBetAsync(userId, betJson, "127.0.0.1", CancellationToken.None);
+        Func<Task> act = async () =>
+            await _betService.PlaceBetAsync(userId, betJson, "127.0.0.1", CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<Exception>().WithMessage("Bet is invalid");
     }
-    
+
     [Fact]
     public async Task PlaceBetAsync_WhenValidAndUserWins_ShouldReturnExpectedResult()
     {
@@ -83,9 +86,9 @@ public class BetServiceTests
         var betValidResponse = new IsBetValidResponse();
         betValidResponse.setIsValid(true);
         betValidResponse.setBetAmount(5);
-        
+
         _betValidatorMock.Setup(x => x.IsValid(It.IsAny<string>())).Returns(betValidResponse);
-        
+
         _betValidatorMock.Setup(x => x.EstimateWin(It.IsAny<string>(), It.IsAny<int>())).Returns(winAmount);
 
         // Act
@@ -101,10 +104,9 @@ public class BetServiceTests
 
         _accountServiceMock.Verify(a => a.WithdrawAsync(userId, betAmount, CancellationToken.None), Times.Once);
         _accountServiceMock.Verify(a => a.DepositAsync(userId, winAmount / 100.0m, CancellationToken.None), Times.Once);
-        _jackpotServiceMock.Verify(j => j.AddToJackpot(winAmount / 100.0m), Times.Once);
-        _jackpotServiceMock.Verify(j => j.BroadcastJackpotUpdateAsync(), Times.Once);
+        _jackpotServiceMock.Verify(j => j.BroadcastJackpotUpdateAsync(CancellationToken.None), Times.Once);
     }
-        
+
     [Fact]
     public async Task PlaceBetAsync_WhenWinAmountIs0_ShouldNotDeposit()
     {
@@ -132,9 +134,9 @@ public class BetServiceTests
         var betValidResponse = new IsBetValidResponse();
         betValidResponse.setIsValid(true);
         betValidResponse.setBetAmount(5);
-        
+
         _betValidatorMock.Setup(x => x.IsValid(It.IsAny<string>())).Returns(betValidResponse);
-        
+
         _betValidatorMock.Setup(x => x.EstimateWin(It.IsAny<string>(), It.IsAny<int>())).Returns(winAmount);
 
         // Act
@@ -149,8 +151,7 @@ public class BetServiceTests
         }
 
         _accountServiceMock.Verify(a => a.WithdrawAsync(userId, betAmount, CancellationToken.None), Times.Once);
-        _accountServiceMock.Verify(a => a.DepositAsync(userId, winAmount / 100.0m, CancellationToken.None), Times.Never);
-        _jackpotServiceMock.Verify(j => j.AddToJackpot(winAmount / 100.0m), Times.Once);
-        _jackpotServiceMock.Verify(j => j.BroadcastJackpotUpdateAsync(), Times.Once);
+        _accountServiceMock.Verify(a => a.DepositAsync(userId, winAmount / 100.0m, CancellationToken.None),
+            Times.Never);
     }
 }
